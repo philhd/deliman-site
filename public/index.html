@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Deli Manager Showdown</title>
+    <style>
+        /* CSS Styles */
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #87CEEB; /* Sky blue background */
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            display: block;
+            background-color: #228B22; /* Supermarket floor (green) */
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-size: 48px;
+            display: none;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 16px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="gameOver">Game Over</div>
+    <div id="instructions">
+        Use Arrow Keys to Move & Jump | Press Spacebar to Throw Deli Meats
+    </div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <script>
+        // JavaScript Code
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreElement = document.getElementById('score');
+        const gameOverElement = document.getElementById('gameOver');
+
+        const keys = {};
+        let score = 0;
+        let gameOver = false;
+
+        // Load Images
+        const deliMeatImg = new Image();
+        deliMeatImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8ZWxsaXBzZSBjeD0iMTAiIGN5PSI1IiByeD0iMTAiIHJ5PSI1IiBmaWxsPSIjRTc2RjUxIiAvPgogICAgPHBhdGggZD0iTTAsNSBRNSwwIDEwLDUgVDIwLDUiIHN0cm9rZT0iI0Q4NDMxNSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiAvPgo8L3N2Zz4=';
+
+        const shoppingCartImg = new Image();
+        shoppingCartImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8cmVjdCB4PSI1IiB5PSI3IiB3aWR0aD0iMzAiIGhlaWdodD0iMTIiIGZpbGw9IiM5RTlFOUUiIHN0cm9rZT0iIzYxNjE2MSIgc3Ryb2tlLXdpZHRoPSIxLjUiIC8+CiAgICA8Y2lyY2xlIGN4PSIxMCIgY3k9IjE5IiByPSIzIiBmaWxsPSIjNDI0MjQyIiAvPgogICAgPGNpcmNsZSBjeD0iMzIiIGN5PSIxOSIgcj0iMyIgZmlsbD0iIzQyNDI0MiIgLz4KPC9zdmc+'; 
+
+        const deliManagerImg = new Image();
+        deliManagerImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8Y2lyY2xlIGN4PSIyNSIgY3k9IjE1IiByPSIxMCIgZmlsbD0iI0ZGRERBQjkiIC8+CiAgICA8cmVjdCB4PSIxNSIgeT0iNSIgd2lkdGg9IjIwIiBoZWlnaHQ9IjUiIGZpbGw9IiMyRTg2QzEiIC8+CiAgICA8cmVjdCB4PSIxNSIgeT0iMjUiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0iIzFFODQ0OSIgLz4KICAgIDxyZWN0IHg9IjEwIiB5PSIyNSIgd2lkdGg9IjUiIGhlaWdodD0iMjAiIGZpbGw9IiNGRERBQjkiIC8+CiAgICA8cmVjdCB4PSIzNSIgeT0iMjUiIHdpZHRoPSI1IiBmaWxsPSIjRkREREFCOCIgLz4KPC9zdmc+';
+
+        const angryCustomerImg = new Image();
+        angryCustomerImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8Y2lyY2xlIGN4PSIyNSIgY3k9IjE1IiByPSIxMCIgZmlsbD0iI0ZGM0NDQSIgLz4KICAgIDxsaW5lIHgxPSIyMCIgeTE9IjEyIiB4Mj0iMjIiIHkyPSIxMiIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjIiIC8+CiAgICA8bGluZSB4MT0iMjgiIHkxPSIxMCIgeDI9IjMwIiB5Mj0iMCIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjIiIC8+CiAgICA8cGF0aCBkPSJNMTAsMjAgUTI1LDI1IDMwLDIwIiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgLz4KICAgIDxyZWN0IHg9IjE1IiB5PSIyNSIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjQzAzOTI5IiAvPgogICAgPHJlY3QgeD0iMTAiIHk9IjI1IiB3aWR0aD0iNSIgaGVpZ2h0PSIyMCIgZmlsbD0iI0ZGM0NDQyIgLz4KICAgIDxyZWN0IHg9IjM1IiB5PSIyNSIgd2lkdGg9IjUiIGhlaWdodD0iMjAiIGZpbGw9IiNGRkNDQkMiIC8+Cjwvc3ZnPg==';
+
+        // Ensure all images are loaded before starting the game
+        let imagesLoaded = 0;
+        const totalImages = 4; // deliMeatImg, shoppingCartImg, deliManagerImg, angryCustomerImg
+
+        function imageLoaded() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) {
+                gameLoop();
+            }
+        }
+
+        deliMeatImg.onload = imageLoaded;
+        shoppingCartImg.onload = imageLoaded;
+        deliManagerImg.onload = imageLoaded;
+        angryCustomerImg.onload = imageLoaded;
+
+        // Define Classes Before Instantiation
+
+        // Projectile Class (Deli Meat)
+        class Projectile {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 20;
+                this.height = 10;
+                this.velocityX = 7;
+                this.velocityY = -10; // Initial upward velocity
+                this.rotation = 0;
+                this.rotationSpeed = 0.2; // radians per frame
+                this.gravity = projectileGravity;
+            }
+
+            update() {
+                this.velocityY += this.gravity;
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+                this.rotation += this.rotationSpeed;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                if (deliMeatImg.complete) {
+                    ctx.drawImage(deliMeatImg, -this.width / 2, -this.height / 2, this.width, this.height);
+                } else {
+                    // Fallback if image not loaded
+                    ctx.fillStyle = '#E76F51'; // Balogna color
+                    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                }
+                ctx.restore();
+            }
+        }
+
+        // Enemy Projectile (Shopping Cart) Class
+        class EnemyProjectile {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 40; // Increased width
+                this.height = 20; // Increased height
+                this.velocityX = -shoppingCartSpeed;
+            }
+
+            update() {
+                this.x += this.velocityX;
+                // Shopping carts could have slight vertical movement if desired
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (shoppingCartImg.complete) {
+                    ctx.drawImage(shoppingCartImg, -this.width / 2, -this.height / 2, this.width, this.height);
+                } else {
+                    // Fallback if image not loaded
+                    ctx.fillStyle = '#9E9E9E'; // Grey color
+                    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                }
+                ctx.restore();
+            }
+        }
+
+        // Deli Manager Class
+        class DeliManager {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 50;
+                this.height = 50;
+                this.velocityX = 0;
+                this.velocityY = 0;
+                this.speed = 5;
+                this.jumping = false;
+                this.throwCooldown = 3000; // milliseconds
+                this.lastThrow = 0;
+            }
+
+            update() {
+                // Player Movement
+                if (keys['ArrowRight']) {
+                    this.velocityX = this.speed;
+                } else if (keys['ArrowLeft']) {
+                    this.velocityX = -this.speed;
+                } else {
+                    this.velocityX = 0;
+                }
+
+                if (keys['ArrowUp']) {
+                    if (!this.jumping) {
+                        this.velocityY = -12;
+                        this.jumping = true;
+                    }
+                }
+
+                this.velocityY += gravity;
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+
+                // Prevent player from falling below the ground
+                if (this.y + this.height >= 350) {
+                    this.y = 350 - this.height;
+                    this.velocityY = 0;
+                    this.jumping = false;
+                }
+
+                // Throw Deli Meat
+                if (keys['Space']) {
+                    const currentTime = Date.now();
+                    if (currentTime - this.lastThrow > this.throwCooldown) {
+                        projectiles.push(new Projectile(this.x + this.width, this.y + this.height / 2));
+                        this.lastThrow = currentTime;
+                    }
+                }
+            }
+
+            draw() {
+                if (deliManagerImg.complete) {
+                    ctx.drawImage(deliManagerImg, this.x, this.y, this.width, this.height);
+                } else {
+                    // Fallback if image not loaded
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+
+            getHitbox() {
+                const hitboxWidth = this.width * 0.8;
+                const hitboxHeight = this.height * 0.8;
+                const hitboxX = this.x + (this.width - hitboxWidth) / 2;
+                const hitboxY = this.y + (this.height - hitboxHeight) / 2;
+                return { x: hitboxX, y: hitboxY, width: hitboxWidth, height: hitboxHeight };
+            }
+        }
+
+        // Angry Customer Class
+        class AngryCustomer {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 50;
+                this.height = 50;
+                this.velocityX = -2;
+                this.canThrow = true;
+                this.throwCooldown = 3000; // 3 seconds
+                this.lastThrow = Date.now();
+            }
+
+            update() {
+                this.x += this.velocityX;
+
+                // Enemy throws shopping cart
+                if (this.canThrow && Date.now() - this.lastThrow > this.throwCooldown) {
+                    enemyProjectiles.push(new EnemyProjectile(this.x + this.width, this.y + this.height / 2));
+                    this.canThrow = false;
+                    this.lastThrow = Date.now();
+                }
+
+                // Reset throwing ability after cooldown
+                if (!this.canThrow && Date.now() - this.lastThrow > this.throwCooldown) {
+                    this.canThrow = true;
+                }
+            }
+
+            draw() {
+                if (angryCustomerImg.complete) {
+                    ctx.drawImage(angryCustomerImg, this.x, this.y, this.width, this.height);
+                } else {
+                    // Fallback if image not loaded
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+
+            getHitbox() {
+                const hitboxWidth = this.width * 0.8;
+                const hitboxHeight = this.height * 0.8;
+                const hitboxX = this.x + (this.width - hitboxWidth) / 2;
+                const hitboxY = this.y + (this.height - hitboxHeight) / 2;
+                return { x: hitboxX, y: hitboxY, width: hitboxWidth, height: hitboxHeight };
+            }
+        }
+
+        // Instantiate Deli Manager
+        const deliManager = new DeliManager(100, 300);
+
+        // Spawn Enemies
+        const enemySpawnInterval = 2000; // Spawn every 2 seconds
+        setInterval(() => {
+            const enemy = new AngryCustomer(canvas.width, 300);
+            enemies.push(enemy);
+        }, enemySpawnInterval);
+
+        // Deli Meat Projectile
+        const projectiles = [];
+
+        // Enemy (Angry Customer)
+        const enemies = [];
+
+        // Shopping Cart Projectile
+        const enemyProjectiles = [];
+        const shoppingCartSpeed = 3;
+
+        // Gravity
+        const gravity = 0.5;
+        const projectileGravity = 0.3;
+
+        // Handle Keyboard Input
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        // Collision Detection Functions
+        function circleRectCollision(circle, rect) {
+            const distX = Math.abs(circle.x - (rect.x + rect.width / 2));
+            const distY = Math.abs(circle.y - (rect.y + rect.height / 2));
+
+            if (distX > (rect.width / 2 + circle.width / 2)) { return false; }
+            if (distY > (rect.height / 2 + circle.height / 2)) { return false; }
+
+            if (distX <= (rect.width / 2)) { return true; }
+            if (distY <= (rect.height / 2)) { return true; }
+
+            const dx = distX - rect.width / 2;
+            const dy = distY - rect.height / 2;
+            return (dx * dx + dy * dy <= (circle.width / 2 * circle.height / 2));
+        }
+
+        function rectCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        // Update Function
+        function update() {
+            if (gameOver) return;
+
+            // Update Deli Manager
+            deliManager.update();
+
+            // Update Projectiles
+            projectiles.forEach((proj, index) => {
+                proj.update();
+                // Remove projectile if it goes off screen
+                if (proj.x > canvas.width || proj.y > canvas.height) {
+                    projectiles.splice(index, 1);
+                }
+            });
+
+            // Update Enemies
+            enemies.forEach((enemy, index) => {
+                enemy.update();
+
+                // Remove enemy if off screen
+                if (enemy.x + enemy.width < 0) {
+                    enemies.splice(index, 1);
+                }
+            });
+
+            // Update Enemy Projectiles
+            enemyProjectiles.forEach((proj, index) => {
+                proj.update();
+                // Remove projectile if it goes off screen
+                if (proj.x + proj.width < 0 || proj.y > canvas.height) {
+                    enemyProjectiles.splice(index, 1);
+                }
+            });
+
+            // Collision Detection between Projectiles and Enemies
+            projectiles.forEach((proj, pIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    const enemyHitbox = enemy.getHitbox();
+                    if (circleRectCollision(proj, enemyHitbox)) {
+                        // Remove both projectile and enemy
+                        projectiles.splice(pIndex, 1);
+                        enemies.splice(eIndex, 1);
+                        score += 10;
+                        scoreElement.textContent = `Score: ${score}`;
+                    }
+                });
+            });
+
+            // Collision Detection between Enemy Projectiles and Deli Manager
+            enemyProjectiles.forEach((proj, epIndex) => {
+                const deliHitbox = deliManager.getHitbox();
+                if (rectCollision(proj, deliHitbox)) {
+                    enemyProjectiles.splice(epIndex, 1);
+                    score -= 20;
+                    scoreElement.textContent = `Score: ${score}`;
+                    if (score < 0) {
+                        endGame();
+                    }
+                }
+            });
+
+            // Collision Detection between Enemies and Deli Manager
+            enemies.forEach((enemy) => {
+                const deliHitbox = deliManager.getHitbox();
+                const enemyHitbox = enemy.getHitbox();
+                if (rectCollision(enemyHitbox, deliHitbox)) {
+                    endGame();
+                }
+            });
+        }
+
+        // Render Function
+        function render() {
+            // Clear Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Deli Manager
+            deliManager.draw();
+
+            // Draw Projectiles
+            projectiles.forEach((proj) => {
+                proj.draw();
+            });
+
+            // Draw Enemies
+            enemies.forEach((enemy) => {
+                enemy.draw();
+            });
+
+            // Draw Enemy Projectiles
+            enemyProjectiles.forEach((proj) => {
+                proj.draw();
+            });
+        }
+
+        // Game Loop
+        function gameLoop() {
+            update();
+            render();
+            if (!gameOver) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Start Game after all images are loaded
+        // Handled by onload event listeners
+
+        // End Game Function
+        function endGame() {
+            gameOver = true;
+            gameOverElement.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
