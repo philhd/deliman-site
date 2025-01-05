@@ -81,6 +81,15 @@
   font-weight: 500;
 }
 
+.link {
+  color:rgb(255, 127, 178);
+  font-weight: 600;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
 a.primary {
   background: var(--foreground);
   color: var(--background);
